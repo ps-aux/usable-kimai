@@ -4,16 +4,18 @@ const filterFields = ['search', 'subsytem']
 
 startListeningForDialog()
 
-setDialogOpenedHandler(() => {
-    const issueSelect = document.querySelector('#edit_issue_ID')
+setDialogOpenedHandler(issueSelect => {
     setupFilter(issueSelect)
 })
 
 function setupFilter(issueSelect) {
+    console.log(`Setting up issues filter.
+     Issue count ${issueSelect.childElementCount}`)
 
     augmentIssueSelect(issueSelect)
 
-    const filter = new Filter(filterFields, issueSelect)
+    const issues = Array.from(issueSelect.querySelectorAll('option'))
+    const filter = new Filter(filterFields, issues)
 
     const container = createContainer(issueSelect)
     const searchInput = createFilterField('search', filter)
@@ -23,12 +25,6 @@ function setupFilter(issueSelect) {
     container.appendChild(document.createElement('br'))
 }
 
-
-function search(val, issueSelect) {
-    localStorage.setItem("issue-search", val);
-    const i = filterIssues(issueSelect, val.trim().toLowerCase())
-    console.log(i)
-}
 
 function createContainer(issueSelect) {
     const holder = issueSelect.parentElement
@@ -53,12 +49,12 @@ function createFilterField(name, filter) {
 
     // Input field
     const input = document.createElement("input")
-    const initVal = localStorage.getItem(name);
-    if (initVal)
-        input.value = initVal
+    input.value = filter.values[name]
 
     input.addEventListener('input', e => {
         e.preventDefault() // Just in case ;)
+        // TODO add input delay
+
         const val = input.value
         filter.fieldChanged({key: name, val})
     })
@@ -77,20 +73,28 @@ function augmentIssueSelect(issueSelect) {
 
 class Filter {
 
-    constructor(filterFields, issueSelect) {
-        this.issueSelect = issueSelect
+    constructor(filterFields, issues) {
         const values = {}
-        filterFields.forEach(f => values[f] = '')
+        filterFields.forEach(name => {
+            // Attempt to get from local storage
+            let val = localStorage.getItem(`uk-filter-${name}`)
+            if (!val)
+                val = ''
+            values[name] = val
+        })
 
         this.values = values
-        this.issues = Array.from(this.issueSelect.querySelectorAll('option'))
+        this.issues = issues
 
+        // Set the filter state according to the init vals
+        this.filterIssues()
     }
 
     fieldChanged({key, val}) {
         // TODO change to immutable update
         this.values[key] = val
         this.filterIssues()
+        localStorage.setItem(`uk-filter-${key}`, val)
     }
 
     /**
@@ -109,18 +113,28 @@ class Filter {
     }
 
     /**
+     * Always read from DOM as at the beginning
+     * not all issues might be loaded in select element
+     */
+
+    /**
      * Sets the issues visibility
      */
     filterIssues() {
+        debug('Filtering', this.values)
         const visible = this.calculateVisibleIssues()
         return this.issues.forEach(i => {
             // Reset
             i.style.display = 'block'
 
             // If not among visible
-            if (visible.indexOf(i.value) < 0)
+            if (visible.indexOf(i.value) < 0) {
                 i.style.display = 'none'
+            }
         })
     }
 }
 
+function debug() {
+    console.debug(...arguments)
+}
