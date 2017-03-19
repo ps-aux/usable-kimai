@@ -6,7 +6,17 @@ startListeningForDialog()
 
 setDialogOpenedHandler(issueSelect => {
     setupFilter(issueSelect)
+    adjustDialog()
 })
+
+function adjustDialog() {
+    const dialogContent = document.querySelector('#floater_content')
+    dialogContent.style.height = '800px'
+
+    const dialogHolder = document.querySelector('#floater')
+    dialogHolder.style.top = '0px'
+
+}
 
 function setupFilter(issueSelect) {
     console.log(`Setting up issues filter.`
@@ -14,18 +24,45 @@ function setupFilter(issueSelect) {
 
     augmentIssueSelect(issueSelect)
 
-    const issues = Array.from(issueSelect.querySelectorAll('option'))
-    const filter = new Filter(filterFields, issues)
+    const issuesEls = Array.from(issueSelect.querySelectorAll('option'))
+    const issuesData = parseIssues(issuesEls)
+    const subsystems = retrieveSubsystems(issuesData)
+
+    const filter = new Filter(filterFields, issuesEls, issuesData)
 
     const container = createContainer(issueSelect)
     const searchField = createFilterField('search', filter)
-    const subsystemField = createFilterField('subsystem', filter)
+    const subsystemField = createFilterField('subsystem', filter, subsystems)
 
     container.appendChild(searchField)
-    // container.appendChild(subsystemField)
+    container.appendChild(subsystemField)
 
     // To prevent original style from being broken
     container.appendChild(document.createElement('br'))
+}
+
+const subsystemPattern = /\[.*(?=\])/
+
+function parseIssues(issuesEls) {
+    return issuesEls.map(el => {
+        const text = el.text
+        let subsystem = (text.match(subsystemPattern) || {})[0]
+        if (subsystem)
+            subsystem = subsystem.slice(1)
+
+        return {text, value: el.value, subsystem}
+    })
+}
+
+function retrieveSubsystems(issues) {
+    const vals = new Set()
+    vals.add('all')
+    issues.forEach(i => {
+        if (i.subsystem)
+            vals.add(i.subsystem)
+    })
+
+    return Array.from(vals)
 }
 
 
@@ -40,7 +77,7 @@ function createContainer(issueSelect) {
     return container
 }
 
-function createFilterField(name, filter) {
+function createFilterField(name, filter, values) {
     // Parent
     const holder = document.createElement('div')
 
@@ -49,23 +86,60 @@ function createFilterField(name, filter) {
     const labelEl = document.createElement('label')
     labelEl.appendChild(document.createTextNode(`${label}:`))
 
+    const defaultValue = filter.values[name]
+    const filterChanged = val => filter.fieldChanged({key: name, val})
 
-    // Input field
-    const input = document.createElement("input")
-    input.value = filter.values[name]
+    let el = null
+    if (values) {
+        const val = defaultValue ? defaultValue : values[0]
+        el = createSelect(values,
+            filterChanged,
+            val)
+    } else {
+        el = createInput(filterChanged,
+            defaultValue)
+    }
+
+    holder.appendChild(labelEl)
+    holder.appendChild(el)
+
+    return holder
+}
+
+function createSelect(values, onChange, defaultValue) {
+    const select = document.createElement('select')
+    values.forEach(v => {
+        const option = document.createElement('option')
+        option.text = v
+        option.value = v
+        select.add(option)
+    })
+
+    select.addEventListener('change', e => {
+        e.preventDefault()
+        // Make all value empty string
+        const val = select.value === 'all' ? '' : select.value
+        onChange(val)
+    })
+
+    select.value = defaultValue
+
+    return select
+
+}
+
+function createInput(onChange, defaultValue) {
+    const input = document.createElement('input')
+    input.value = defaultValue
 
     input.addEventListener('input', e => {
         e.preventDefault() // Just in case ;)
         // TODO add input delay
-
         const val = input.value
-        filter.fieldChanged({key: name, val})
+        onChange(val)
     })
 
-    holder.appendChild(labelEl)
-    holder.appendChild(input)
-
-    return holder
+    return input
 }
 
 
@@ -76,7 +150,7 @@ function augmentIssueSelect(issueSelect) {
 
 class Filter {
 
-    constructor(filterFields, issuesEls) {
+    constructor(filterFields, issuesEls, issuesData) {
         const values = {}
         filterFields.forEach(name => {
             // Attempt to get from local storage
@@ -88,9 +162,8 @@ class Filter {
 
         this.values = values
         this.issuesEls = issuesEls
-        this.issuesData = issuesEls.map(el => {
-            return {text: el.text, value: el.value}
-        })
+        this.issuesData = issuesData
+
 
         // Set the filter state according to the init vals
         this.filterIssues()
@@ -113,8 +186,19 @@ class Filter {
     }
 
     filterPredicate(issue) {
-        const text = this.values.search
-        return issue.text.toLowerCase().indexOf(text) > -1
+        // Contains search text
+        const textMatches = issue.text.toLowerCase()
+                .indexOf(this.values.search) > -1
+
+        if (!textMatches)
+            return false
+
+        const subsytem = this.values.subsystem
+        const subsystemMatches = subsytem ?
+            issue.subsystem === subsytem :
+            true
+
+        return subsystemMatches
     }
 
     /**
@@ -128,7 +212,6 @@ class Filter {
     filterIssues() {
         debug('Filtering', this.values)
         const visible = this.calculateVisibleIssues()
-        console.log(visible.length)
         return this.issuesEls.forEach(i => {
             // Reset
             i.style.display = 'block'

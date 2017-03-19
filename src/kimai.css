@@ -1,7 +1,8 @@
 .issue-filter {
-    margin-bottom:3px;
+    margin-bottom: 3px;
 }
 
 .issue-filter input {
     width: 394px;
+    margin-bottom: 10px;
 }
