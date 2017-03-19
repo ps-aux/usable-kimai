@@ -6,4 +6,5 @@ Chrome extension for [Kimai](https://github.com/kimai/kimai) used at my current 
   - Youtrack subsystem
   - search value
 
-
+### Installation
+Get it from Chrome Web Store [here](https://chrome.google.com/webstore/detail/usable-kimai/afhfjgbmaiokofbidolpehhageffhmao)
