@@ -1,5 +1,7 @@
 console.log('Usable Kimai extension starting')
 
+const filterFields = ['search', 'subsytem']
+
 startListeningForDialog()
 
 setDialogOpenedHandler(() => {
@@ -11,13 +13,16 @@ function setupFilter(issueSelect) {
 
     augmentIssueSelect(issueSelect)
 
+    const filter = new Filter(filterFields, issueSelect)
+
     const container = createContainer(issueSelect)
-    const searchInput = createFilterField('search', search, issueSelect)
+    const searchInput = createFilterField('search', filter)
 
     container.appendChild(searchInput)
     // To prevent original style from being broken
     container.appendChild(document.createElement('br'))
 }
+
 
 function search(val, issueSelect) {
     localStorage.setItem("issue-search", val);
@@ -36,14 +41,15 @@ function createContainer(issueSelect) {
     return container
 }
 
-function createFilterField(name, onValChange, issueSelect) {
+function createFilterField(name, filter) {
     // Parent
     const holder = document.createElement('div')
 
     //Label
-    name = name.charAt(0).toUpperCase() + name.slice(1);  // Capitalize
+    const label = name.charAt(0).toUpperCase() + name.slice(1);  // Capitalize
     const labelEl = document.createElement('label')
-    labelEl.appendChild(document.createTextNode(`${name}:`))
+    labelEl.appendChild(document.createTextNode(`${label}:`))
+
 
     // Input field
     const input = document.createElement("input")
@@ -54,7 +60,7 @@ function createFilterField(name, onValChange, issueSelect) {
     input.addEventListener('input', e => {
         e.preventDefault() // Just in case ;)
         const val = input.value
-        onValChange(val, issueSelect)
+        filter.fieldChanged({key: name, val})
     })
 
     holder.appendChild(labelEl)
@@ -63,22 +69,58 @@ function createFilterField(name, onValChange, issueSelect) {
     return holder
 }
 
+
 function augmentIssueSelect(issueSelect) {
     issueSelect.setAttribute('size', '10')
 }
 
 
-function filterIssues(el, text) {
-    const issues = Array.from(el.querySelectorAll('option'))
-    return issues.forEach(i => {
-        i.style.display = 'block'
-        const issueText = i.text
+class Filter {
 
-        const containsText = issueText.toLowerCase().indexOf(text) > -1
-        if (!containsText)
-            i.style.display = 'none'
-    })
+    constructor(filterFields, issueSelect) {
+        this.issueSelect = issueSelect
+        const values = {}
+        filterFields.forEach(f => values[f] = '')
+
+        this.values = values
+        this.issues = Array.from(this.issueSelect.querySelectorAll('option'))
+
+    }
+
+    fieldChanged({key, val}) {
+        // TODO change to immutable update
+        this.values[key] = val
+        this.filterIssues()
+    }
+
+    /**
+     * Calculates indexes (values) of visible issues
+     */
+    calculateVisibleIssues() {
+        return this.issues
+            .filter(i => this.filterPredicate(i))
+            .map(i => i.value)
+    }
+
+    filterPredicate(issue) {
+        const issueText = issue.text
+        const text = this.values.search
+        return issueText.toLowerCase().indexOf(text) > -1
+    }
+
+    /**
+     * Sets the issues visibility
+     */
+    filterIssues() {
+        const visible = this.calculateVisibleIssues()
+        return this.issues.forEach(i => {
+            // Reset
+            i.style.display = 'block'
+
+            // If not among visible
+            if (visible.indexOf(i.value) < 0)
+                i.style.display = 'none'
+        })
+    }
 }
-
-
 
