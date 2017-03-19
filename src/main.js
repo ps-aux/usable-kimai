@@ -1,6 +1,6 @@
 console.log('Usable Kimai extension starting')
 
-const filterFields = ['search', 'subsytem']
+const filterFields = ['search', 'subsystem']
 
 startListeningForDialog()
 
@@ -9,8 +9,8 @@ setDialogOpenedHandler(issueSelect => {
 })
 
 function setupFilter(issueSelect) {
-    console.log(`Setting up issues filter.
-     Issue count ${issueSelect.childElementCount}`)
+    console.log(`Setting up issues filter.`
+        + `Issue count ${issueSelect.childElementCount}`)
 
     augmentIssueSelect(issueSelect)
 
@@ -18,9 +18,12 @@ function setupFilter(issueSelect) {
     const filter = new Filter(filterFields, issues)
 
     const container = createContainer(issueSelect)
-    const searchInput = createFilterField('search', filter)
+    const searchField = createFilterField('search', filter)
+    const subsystemField = createFilterField('subsystem', filter)
 
-    container.appendChild(searchInput)
+    container.appendChild(searchField)
+    // container.appendChild(subsystemField)
+
     // To prevent original style from being broken
     container.appendChild(document.createElement('br'))
 }
@@ -73,7 +76,7 @@ function augmentIssueSelect(issueSelect) {
 
 class Filter {
 
-    constructor(filterFields, issues) {
+    constructor(filterFields, issuesEls) {
         const values = {}
         filterFields.forEach(name => {
             // Attempt to get from local storage
@@ -84,7 +87,10 @@ class Filter {
         })
 
         this.values = values
-        this.issues = issues
+        this.issuesEls = issuesEls
+        this.issuesData = issuesEls.map(el => {
+            return {text: el.text, value: el.value}
+        })
 
         // Set the filter state according to the init vals
         this.filterIssues()
@@ -101,15 +107,14 @@ class Filter {
      * Calculates indexes (values) of visible issues
      */
     calculateVisibleIssues() {
-        return this.issues
+        return this.issuesData
             .filter(i => this.filterPredicate(i))
             .map(i => i.value)
     }
 
     filterPredicate(issue) {
-        const issueText = issue.text
         const text = this.values.search
-        return issueText.toLowerCase().indexOf(text) > -1
+        return issue.text.toLowerCase().indexOf(text) > -1
     }
 
     /**
@@ -123,7 +128,8 @@ class Filter {
     filterIssues() {
         debug('Filtering', this.values)
         const visible = this.calculateVisibleIssues()
-        return this.issues.forEach(i => {
+        console.log(visible.length)
+        return this.issuesEls.forEach(i => {
             // Reset
             i.style.display = 'block'
 
