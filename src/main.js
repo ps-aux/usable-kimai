@@ -1,10 +1,14 @@
 console.log('Usable Kimai extension starting')
 
-const filterFields = ['search', 'subsystem']
+const logDebug = false
 
 startListeningForDialog()
 
-setDialogOpenedHandler(issueSelect => {
+setIssuesLoadedHandler(issueSelect => {
+    // Remove old container
+    if (_container)
+        _container.remove()
+
     setupFilter(issueSelect)
     adjustDialog()
 })
@@ -18,28 +22,29 @@ function adjustDialog() {
 
 }
 
+var _container = null
 function setupFilter(issueSelect) {
     console.log(`Setting up issues filter.`
         + `Issue count ${issueSelect.childElementCount}`)
 
+    const container = createContainer(issueSelect)
+    _container = container
+
     augmentIssueSelect(issueSelect)
 
     const issuesEls = Array.from(issueSelect.querySelectorAll('option'))
-    const issuesData = parseIssues(issuesEls)
-    const subsystems = retrieveSubsystems(issuesData)
 
-    const filter = new Filter(filterFields, issuesEls, issuesData)
+    const filter = new Filter(issuesEls)
 
-    const container = createContainer(issueSelect)
-    const searchField = createFilterField('search', filter)
-    const subsystemField = createFilterField('subsystem', filter, subsystems)
-
-    container.appendChild(searchField)
-    container.appendChild(subsystemField)
+    Object.keys(filter.fields).forEach(f => {
+        const el = createFilterField(f, filter)
+        container.appendChild(el)
+    })
 
     // To prevent original style from being broken
     container.appendChild(document.createElement('br'))
 }
+
 
 const subsystemPattern = /\[.*(?=\])/
 
@@ -77,7 +82,7 @@ function createContainer(issueSelect) {
     return container
 }
 
-function createFilterField(name, filter, values) {
+function createFilterField(name, filter) {
     // Parent
     const holder = document.createElement('div')
 
@@ -86,15 +91,15 @@ function createFilterField(name, filter, values) {
     const labelEl = document.createElement('label')
     labelEl.appendChild(document.createTextNode(`${label}:`))
 
-    const defaultValue = filter.values[name]
+    const defaultValue = filter.fields[name].value
     const filterChanged = val => filter.fieldChanged({key: name, val})
 
     let el = null
-    if (values) {
-        const val = defaultValue ? defaultValue : values[0]
-        el = createSelect(values,
+    const allowedValues = filter.fields[name].allowedValues
+    if (allowedValues) {
+        el = createSelect(allowedValues,
             filterChanged,
-            val)
+            defaultValue)
     } else {
         el = createInput(filterChanged,
             defaultValue)
@@ -122,7 +127,13 @@ function createSelect(values, onChange, defaultValue) {
         onChange(val)
     })
 
-    select.value = defaultValue
+    let val = null
+    if (defaultValue && values.indexOf(defaultValue) > -1)
+        val = defaultValue
+    else
+        val = values[0]
+
+    select.value = val
 
     return select
 
@@ -150,19 +161,27 @@ function augmentIssueSelect(issueSelect) {
 
 class Filter {
 
-    constructor(filterFields, issuesEls, issuesData) {
-        const values = {}
-        filterFields.forEach(name => {
-            // Attempt to get from local storage
-            let val = localStorage.getItem(`uk-filter-${name}`)
-            if (!val)
-                val = ''
-            values[name] = val
-        })
-
-        this.values = values
+    constructor(issuesEls) {
         this.issuesEls = issuesEls
-        this.issuesData = issuesData
+        this.issuesData = parseIssues(issuesEls)
+
+        const subsystems = retrieveSubsystems(this.issuesData)
+
+        this.fields = {
+            search: {},
+            subsystem: {allowedValues: subsystems}
+        }
+
+        Object.keys(this.fields).forEach(f => {
+            const field = this.fields[f]
+            // Attempt to get from local storage
+            let val = localStorage.getItem(`uk-filter-${f}`)
+            if (!val || (field.allowedValues && field.allowedValues.indexOf(val) < 0))
+                val = ''
+
+            field.value = val
+
+        })
 
 
         // Set the filter state according to the init vals
@@ -171,7 +190,7 @@ class Filter {
 
     fieldChanged({key, val}) {
         // TODO change to immutable update
-        this.values[key] = val
+        this.fields[key].value = val
         this.filterIssues()
         localStorage.setItem(`uk-filter-${key}`, val)
     }
@@ -188,12 +207,12 @@ class Filter {
     filterPredicate(issue) {
         // Contains search text
         const textMatches = issue.text.toLowerCase()
-                .indexOf(this.values.search) > -1
+                .indexOf(this.fields.search.value) > -1
 
         if (!textMatches)
             return false
 
-        const subsytem = this.values.subsystem
+        const subsytem = this.fields.subsystem.value
         const subsystemMatches = subsytem ?
             issue.subsystem === subsytem :
             true
@@ -210,7 +229,7 @@ class Filter {
      * Sets the issues visibility
      */
     filterIssues() {
-        debug('Filtering', this.values)
+        debug('Filtering', JSON.stringify(this.fields))
         const visible = this.calculateVisibleIssues()
         return this.issuesEls.forEach(i => {
             // Reset
@@ -225,5 +244,6 @@ class Filter {
 }
 
 function debug() {
-    console.debug(...arguments)
+    if (logDebug)
+        console.debug(...arguments)
 }
