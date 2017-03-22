@@ -9,15 +9,16 @@ function go(subsystemFilterOn) {
 
     startListeningForDialog()
 
-    var _container = null
     setIssuesLoadedHandler(issueSelect => {
         // Remove old container
         if (_container)
             _container.remove()
 
-        setupFilter(issueSelect)
+        setupFilter(issueSelect, subsystemFilterOn)
         adjustDialog()
+        enhanceDuration()
     })
+
 
 }
 
@@ -31,7 +32,9 @@ function adjustDialog() {
 }
 
 
-function setupFilter(issueSelect) {
+var _container = null
+
+function setupFilter(issueSelect, subsystemFilterOn) {
     console.log(`Setting up issues filter.`
         + `Issue count ${issueSelect.childElementCount}`)
 
@@ -42,7 +45,7 @@ function setupFilter(issueSelect) {
 
     const issuesEls = Array.from(issueSelect.querySelectorAll('option'))
 
-    const filter = new Filter(issuesEls)
+    const filter = new Filter(issuesEls, subsystemFilterOn)
 
     Object.keys(filter.fields).forEach(f => {
         const el = createFilterField(f, filter)
@@ -168,7 +171,7 @@ function augmentIssueSelect(issueSelect) {
 
 class Filter {
 
-    constructor(issuesEls) {
+    constructor(issuesEls, subsystemFilterOn) {
         this.issuesEls = issuesEls
         this.issuesData = parseIssues(issuesEls)
 
@@ -263,7 +266,74 @@ function debug() {
 
 
 function enhanceDuration() {
-    const parent = document.querySelector("#edit-duration").parentNode
-    console.log(parent)
+    const input = document.querySelector("#edit_duration")
+    const parent = input.parentNode
 
+    const addButton = duration => {
+
+        function onClick() {
+            let time = parseTime(input.value)
+            console.log(time)
+            time += duration * 60
+            console.log(time)
+            const t = timeToStr(time)
+            console.log(t)
+            input.value = t
+
+            input.dispatchEvent(new Event('change'))
+        }
+
+        const button = createButton(`+ ${duration} min`, onClick)
+        parent.appendChild(button)
+    }
+
+    addButton(15)
+    addButton(30)
+    addButton(60)
+
+    const button = createButton(`Clear`, () => {
+        input.value = '00:00:00'
+        input.dispatchEvent(new Event('change'))
+
+    })
+    parent.appendChild(button)
+
+}
+
+function parseTime(time) {
+    const nums = time.split(':')
+    const h = parseInt(nums[0], 10)
+    const m = nums.length > 1 ? parseInt(nums[1], 10) : 0
+    const s = nums.length > 2 ? parseInt(nums[2], 10) : 0
+
+    return 60 * 60 * h + 60 * m + s
+}
+
+function timeToStr(time) {
+    let left = time
+    const s = left % 60
+    left = (left - s) / 60
+
+    const m = left % 60
+    left = (left - m) / 60
+
+    const h = left
+
+    return `${padInt(h, 2)}:${padInt(m, 2)}:${padInt(s, 2)}`
+}
+
+function padInt(num, places) {
+    return ("0" + num).slice(-places);
+}
+
+
+function createButton(label, onClick) {
+    const button = document.createElement('button')
+    button.appendChild(document.createTextNode(label))
+    button.onclick = e => {
+        e.preventDefault()
+        onClick()
+    }
+
+    return button
 }
