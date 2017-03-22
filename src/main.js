@@ -145,19 +145,9 @@ function go(subsystemFilterOn) {
 
     }
 
-<<<<<<< HEAD
     function createInput(onChange, defaultValue) {
         const input = document.createElement('input')
         input.value = defaultValue
-=======
-    input.addEventListener('input', e => {
-        e.preventDefault() // Just in case ;)
-        // TODO add input delay
-        const val = input.value
-        onChange(val.toLowerCase())
-    })
->>>>>>> master
-
         input.addEventListener('input', e => {
             e.preventDefault() // Just in case ;)
             // TODO add input delay
