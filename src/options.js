@@ -19,8 +19,8 @@ function createOptionUi(option) {
         })
 
     const div = document.createElement('div')
-    div.appendChild(label)
     div.appendChild(input)
+    div.appendChild(label)
 
     options.appendChild(div)
 }
