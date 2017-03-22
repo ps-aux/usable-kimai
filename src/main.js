@@ -147,7 +147,7 @@ function createInput(onChange, defaultValue) {
         e.preventDefault() // Just in case ;)
         // TODO add input delay
         const val = input.value
-        onChange(val)
+        onChange(val.toLowerCase())
     })
 
     return input
