@@ -17,6 +17,7 @@ function go(subsystemFilterOn) {
         setupFilter(issueSelect, subsystemFilterOn)
         adjustDialog()
         enhanceDuration()
+        enhanceEndpoints()
     })
 
 
@@ -273,14 +274,9 @@ function enhanceDuration() {
 
         function onClick() {
             let time = parseTime(input.value)
-            console.log(time)
             time += duration * 60
-            console.log(time)
-            const t = timeToStr(time)
-            console.log(t)
-            input.value = t
 
-            input.dispatchEvent(new Event('change'))
+            changeInputValue(input, timeToStr(time))
         }
 
         const button = createButton(`+ ${duration} min`, onClick)
@@ -292,12 +288,10 @@ function enhanceDuration() {
     addButton(60)
 
     const button = createButton(`Clear`, () => {
-        input.value = '00:00:00'
-        input.dispatchEvent(new Event('change'))
-
+        changeInputValue(input, '00:00:00')
     })
-    parent.appendChild(button)
 
+    parent.appendChild(button)
 }
 
 function parseTime(time) {
@@ -336,4 +330,24 @@ function createButton(label, onClick) {
     }
 
     return button
+}
+
+function enhanceEndpoints() {
+    const inputFrom = document.querySelector("#edit_in_time")
+    const inputTo = document.querySelector("#edit_out_time")
+    const parent = inputFrom.parentNode
+
+    const button = createButton('From last', () => {
+        const last = document.querySelector('#zeftable tr:first-child td[class^="to"]')
+        const time = last.textContent.trim() + ':00'
+        changeInputValue(inputFrom, time)
+        changeInputValue(inputTo, time)
+    })
+
+    parent.appendChild(button)
+}
+
+function changeInputValue(input, val) {
+    input.value = val
+    input.dispatchEvent(new Event('change'))
 }
