@@ -5,50 +5,67 @@ const logDebug = false
 //     .then(go)
 
 loadOptions()
+    .then(go)
 
-function go(subsystemFilterOn) {
-    console.debug('Subsystem filter is ', subsystemFilterOn)
+function go(options) {
+    console.debug('Starting with options ', options)
 
     startListeningForDialog()
 
-    setIssuesLoadedHandler(issueSelect => {
-        // Remove old container
-        if (_container)
-            _container.remove()
 
-        setupFilter(issueSelect, subsystemFilterOn)
-        adjustDialog()
-        enhanceDuration()
-        enhanceEndpoints()
+    setIssuesLoadedHandler(issueSelect => {
+
+        // Remove old ui
+        document.querySelectorAll('.uk-extension')
+            .forEach(el => el.remove())
+
+        const fields = {}
+
+        adjustDialog(issueSelect, options)
+
+        if (options.subsystemFilter)
+            fields.subsystem = true
+
+        if (options.issueSearch) {
+            fields.search = true
+        }
+
+        setupFilter(issueSelect, fields)
+
+        if (options.duration)
+            enhanceDuration()
+        if (options.fromLast)
+            enhanceEndpoints()
     })
 
 
 }
 
-function adjustDialog() {
+function adjustDialog(issueSelect, options) {
+
     const dialogContent = document.querySelector('#floater_content')
-    dialogContent.style.height = '800px'
+    if (options.issueSearch) {
+        dialogContent.style.height = '800px'
+        const dialogHolder = document.querySelector('#floater')
+        dialogHolder.style.top = '0px'
+    }
+    else if (options.subsystemFilter)
+        dialogContent.style.height = '600px'
 
-    const dialogHolder = document.querySelector('#floater')
-    dialogHolder.style.top = '0px'
 
+    if (options.issueSearch)
+        issueSelect.setAttribute('size', '10')
 }
 
-
-var _container = null
-
-function setupFilter(issueSelect, subsystemFilterOn) {
-    console.log(`Setting up issues filter.`
-        + `Issue count ${issueSelect.childElementCount}`)
+function setupFilter(issueSelect, fields) {
+    console.debug(`Setting up issues filter. `
+        + `Issue count is ${issueSelect.childElementCount}`)
 
     const container = createContainer(issueSelect)
-    _container = container
-
-    augmentIssueSelect(issueSelect)
 
     const issuesEls = Array.from(issueSelect.querySelectorAll('option'))
 
-    const filter = new Filter(issuesEls, subsystemFilterOn)
+    const filter = new Filter(issuesEls, fields)
 
     Object.keys(filter.fields).forEach(f => {
         const el = createFilterField(f, filter)
@@ -88,7 +105,7 @@ function retrieveSubsystems(issues) {
 function createContainer(issueSelect) {
     const holder = issueSelect.parentElement
     const container = document.createElement("div")
-    container.className = 'issue-filter'
+    container.className = 'uk-extension issue-filter'
 
     // Add as first
     holder.insertBefore(container, holder.firstChild)
@@ -166,24 +183,20 @@ function createInput(onChange, defaultValue) {
     return input
 }
 
-
-function augmentIssueSelect(issueSelect) {
-    issueSelect.setAttribute('size', '10')
-}
-
-
 class Filter {
 
-    constructor(issuesEls, subsystemFilterOn) {
+    constructor(issuesEls, fields) {
         this.issuesEls = issuesEls
         this.issuesData = parseIssues(issuesEls)
 
         const subsystems = retrieveSubsystems(this.issuesData)
 
-        this.fields = {
-            search: {},
-        }
-        if (subsystemFilterOn)
+        this.fields = {}
+
+        if (fields.search)
+            this.fields.search = {}
+
+        if (fields.subsystem)
             this.fields.subsystem = {allowedValues: subsystems}
 
         Object.keys(this.fields).forEach(f => {
@@ -219,11 +232,17 @@ class Filter {
     }
 
     filterPredicate(issue) {
+        let res = true
         // Contains search text
-        const textMatches = issue.text.toLowerCase()
-                .indexOf(this.fields.search.value) > -1
 
-        if (!textMatches)
+        if (this.fields.search) {
+            const textMatches = issue.text.toLowerCase()
+                    .indexOf(this.fields.search.value) > -1
+            res = res && textMatches
+        }
+
+        // Shortcut
+        if (!res)
             return false
 
         if (this.fields.subsystem) {
@@ -232,10 +251,10 @@ class Filter {
                 issue.subsystem === subsytem :
                 true
 
-            return subsystemMatches
-        } else {
-            return true
+            res = res && subsystemMatches
         }
+
+        return res
 
     }
 
@@ -330,6 +349,7 @@ function createButton(label, onClick) {
         e.preventDefault()
         onClick()
     }
+    button.className = 'uk-extension'
 
     return button
 }
@@ -337,7 +357,6 @@ function createButton(label, onClick) {
 function enhanceEndpoints() {
     const inputFrom = document.querySelector("#edit_in_time")
     const inputTo = document.querySelector("#edit_out_time")
-    const parent = inputFrom.parentNode
 
     const button = createButton('From last', () => {
         const last = document.querySelector('#zeftable tr:first-child td[class^="to"]')
@@ -346,6 +365,7 @@ function enhanceEndpoints() {
         changeInputValue(inputTo, time)
     })
 
+    const parent = inputFrom.parentNode
     parent.appendChild(button)
 }
 
