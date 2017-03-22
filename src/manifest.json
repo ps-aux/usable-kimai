@@ -3,6 +3,7 @@
   "name": "Usable Kimai",
   "description": "Make Kimai at least bit usable",
   "version": "0.2.1",
+  "options_page": "options.html",
   "content_scripts": [
     {
       "matches": [
