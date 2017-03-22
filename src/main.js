@@ -1,8 +1,10 @@
 console.log('Usable Kimai extension starting')
 const logDebug = false
 
-isSubsystemFilterOn()
-    .then(go)
+// isSubsystemFilterOn()
+//     .then(go)
+
+loadOptions()
 
 function go(subsystemFilterOn) {
     console.debug('Subsystem filter is ', subsystemFilterOn)
