@@ -218,12 +218,17 @@ function go(subsystemFilterOn) {
             if (!textMatches)
                 return false
 
-            const subsytem = this.fields.subsystem.value
-            const subsystemMatches = subsytem ?
-                issue.subsystem === subsytem :
-                true
+            if (this.fields.subsystem) {
+                const subsytem = this.fields.subsystem.value
+                const subsystemMatches = subsytem ?
+                    issue.subsystem === subsytem :
+                    true
+                
+                return subsystemMatches
+            } else {
+                return true
+            }
 
-            return subsystemMatches
         }
 
         /**
