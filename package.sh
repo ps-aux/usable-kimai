@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 cd $(dirname $0)
+cd src
 mkdir -p target
-zip -r target/usable-kimai.zip src
+zip ../target/usable-kimai.zip *
 
