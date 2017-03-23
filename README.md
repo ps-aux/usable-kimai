@@ -10,4 +10,4 @@ Chrome extension for [Kimai](https://github.com/kimai/kimai) used at my current 
 
 
 ### Installation
-Get it from Chrome Web Store [here](https://chrome.google.com/webstore/search/usable%20kimai)
+Get it from Chrome Web Store [here](https://chrome.google.com/webstore/search/usable%20kimai) or as Firefox addon [here](https://addons.mozilla.org/en-US/firefox/addon/usable-kimai/)
