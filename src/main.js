@@ -1,9 +1,6 @@
 console.log('Usable Kimai extension starting')
 const logDebug = false
 
-// isSubsystemFilterOn()
-//     .then(go)
-
 loadOptions()
     .then(go)
 
@@ -17,9 +14,11 @@ function go(options) {
 
     setIssuesLoadedHandler(issueSelect => {
 
-        const clockOpts = {donetext: 'Pick', autoclose: true, placement: 'top'}
-        $('#edit_in_time').clockpicker(clockOpts)
-        $('#edit_out_time').clockpicker(clockOpts)
+        if (options.timepicker) {
+            const clockOpts = {donetext: 'Pick', autoclose: true, placement: 'top'}
+            $('#edit_in_time').clockpicker(clockOpts)
+            $('#edit_out_time').clockpicker(clockOpts)
+        }
 
         // Remove old ui
         document.querySelectorAll('.uk-extension')

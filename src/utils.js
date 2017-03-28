@@ -2,7 +2,8 @@ const features = {
     issueSearch: true,
     subsystemFilter: true,
     fromLast: true,
-    duration: true
+    duration: true,
+    timepicker: true
 }
 
 const keys = Array.from(Object.keys(features))
