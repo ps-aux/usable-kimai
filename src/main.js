@@ -7,6 +7,8 @@ const logDebug = false
 loadOptions()
     .then(go)
 
+const $ = window.$
+
 function go(options) {
     console.debug('Starting with options ', options)
 
@@ -14,6 +16,10 @@ function go(options) {
 
 
     setIssuesLoadedHandler(issueSelect => {
+
+        const clockOpts = {donetext: 'Pick', autoclose: true, placement: 'top'}
+        $('#edit_in_time').clockpicker(clockOpts)
+        $('#edit_out_time').clockpicker(clockOpts)
 
         // Remove old ui
         document.querySelectorAll('.uk-extension')
@@ -294,10 +300,7 @@ function enhanceDuration() {
     const addButton = duration => {
 
         function onClick() {
-            let time = parseTime(input.value)
-            time += duration * 60
-
-            changeInputValue(input, timeToStr(time))
+            changeTimeInputValue(input, duration)
         }
 
         const button = createButton(`+ ${duration} min`, onClick)
@@ -358,15 +361,42 @@ function enhanceEndpoints() {
     const inputFrom = document.querySelector("#edit_in_time")
     const inputTo = document.querySelector("#edit_out_time")
 
-    const button = createButton('From last', () => {
+
+    const setToLast = () => {
         const last = document.querySelector('#zeftable tr:first-child td[class^="to"]')
         const time = last.textContent.trim() + ':00'
         changeInputValue(inputFrom, time)
         changeInputValue(inputTo, time)
+
+    }
+
+    const startPlus = minutes => {
+        changeTimeInputValue(inputFrom, minutes)
+        changeTimeInputValue(inputTo, minutes)
+    }
+
+    const fromLast = createButton('From last', () => {
+        setToLast()
+    })
+    const startPlus15 = createButton('Start +15', () => {
+        startPlus(15)
+    })
+    const startPlus30 = createButton('Start +30', () => {
+        startPlus(30)
     })
 
     const parent = inputFrom.parentNode
-    parent.appendChild(button)
+    parent.appendChild(fromLast)
+    parent.appendChild(startPlus15)
+    parent.appendChild(startPlus30)
+}
+
+
+function changeTimeInputValue(input, minutes) {
+    let time = parseTime(input.value)
+    time += minutes * 60
+
+    changeInputValue(input, timeToStr(time))
 }
 
 function changeInputValue(input, val) {
